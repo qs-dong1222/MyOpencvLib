@@ -78,7 +78,7 @@ def IsImageColorful(img):
 
 
 
-@TimeCountWrapper
+#@TimeCountWrapper
 def GetImgMask(imgPath, filterThreshold = 220):
     Img = cv2.imread(imgPath);
     imgGray = cv2.cvtColor(Img, cv2.COLOR_BGR2GRAY);
@@ -87,7 +87,7 @@ def GetImgMask(imgPath, filterThreshold = 220):
     return mask_inv;
 
 
-@TimeCountWrapper
+#@TimeCountWrapper
 def TransparentPaint(img_bg, img_fg, x, y, transparentExtent=220):
     rows,cols,channels = img_fg.shape; # get fg pic demension
     roi = img_bg[x:x+rows, y:y+cols]; # get region from bg according to fg pic demension
@@ -102,7 +102,7 @@ def TransparentPaint(img_bg, img_fg, x, y, transparentExtent=220):
 	
 
 # 定义平移Shift函数
-@TimeCountWrapper
+#@TimeCountWrapper
 def Shift(image, x, y):
     # 定义平移矩阵
     M = np.float32([[1, 0, x], [0, 1, y]])
@@ -113,20 +113,50 @@ def Shift(image, x, y):
 	
 	
 # 定义旋转rotate函数, angle>0 顺时针旋转, angle<0 逆时针旋转
-@TimeCountWrapper
+#@TimeCountWrapper
 def Rotate(image, angle, center=None, scale=1.0):
     # 获取图像尺寸
     (h, w) = image.shape[0:2]
     # 若未指定旋转中心，则将图像中心设为旋转中心
     if center is None:
-        center = (w / 2, h / 2)
+        center = (w / 2.0, h / 2.0)
     # 执行旋转
     M = cv2.getRotationMatrix2D(center, -angle, scale)
     rotated = cv2.warpAffine(image, M, (w, h))
     # 返回旋转后的图像
     return rotated
 	
-	
+
+
+
+# rotate a coord by given degree
+# retval - ans_coord: the rotated coordinate in ratotated image
+# param - degree: rotate degree given in angle format
+def RotateCoord(coord, img_h, img_w, degree):
+    H = img_h
+    W = img_w
+    coord_0 = np.array([[coord[0], coord[1], 1]])
+
+    degree = degree/180.0*3.14159265
+    cos_de = math.cos(degree)
+    sin_de = math.sin(degree)
+    new_H = math.ceil(abs(H*cos_de) + abs(W*sin_de))
+    new_W = math.ceil(abs(W*cos_de) + abs(H*sin_de))
+
+    m1 = np.array([[1,0,0], [0,-1,0], [-0.5*W, 0.5*H, 1]])
+    m2 = np.array([[cos_de,-sin_de,0], [sin_de,cos_de,0], [0, 0, 1]])
+    m3 = np.array([[1,0,0], [0,-1,0], [0.5*new_W, 0.5*new_H, 1]])
+    ans_coord = tuple(np.round(np.dot(np.dot(np.dot(coord_0, m1), m2), m3)[0][0:2]).astype(np.int))
+
+    # rot_mat = np.array([
+    #     [cos_de, sin_de, 0],
+    #     [-sin_de, cos_de, 0],
+    #     [-0.5*W*cos_de+0.5*H*sin_de+0.5*new_W, -0.5*W*sin_de-0.5*H*cos_de+0.5*new_H, 1]
+    # ])
+    # ans_coord = tuple(np.round(np.dot(coord_0, rot_mat)[0][0:2]))
+
+    return ans_coord
+
 
 	
 # 创建插值方法数组
@@ -381,7 +411,7 @@ def GetContours(img, threshold, isImgWhiteBkgnd=False):
 
 # get only those outer contours from a image, ignoring the enclosed inner parts
 # param - imgOriginal: original image
-#       - threshold: 0~255, threshold gray depth used to seperate/distinguish contour
+#       - threshold: 0~255, threshold gray depth that is used to seperate/distinguish contour
 #       - isImgWhiteBkgnd: if the image's background color is white
 # retval - contourList: contour list
 def GetOuterContours(img, threshold,isImgWhiteBkgnd=False):
@@ -582,6 +612,16 @@ def GetMaxAreaContourFromContourList(contourList):
 def GetBlankImg( w,h ):
     sizeTuple = (h,w);
     return np.zeros(sizeTuple, np.uint8);
+
+
+# Get a blank(black) 3 channel(R,G,B) image
+# sizeTuple = (height, width)
+def GetColorfulBlankImg( w,h ):
+    r = GetBlankImg(w, h)
+    g = GetBlankImg(w, h)
+    b = GetBlankImg(w, h)
+    mask = cv2.merge((b, g, r))
+    return mask;
 
 
 
